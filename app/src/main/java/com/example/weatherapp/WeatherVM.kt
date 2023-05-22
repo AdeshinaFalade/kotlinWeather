@@ -1,7 +1,9 @@
 package com.example.weatherapp
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.weatherapp.ui.theme.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -12,14 +14,14 @@ import javax.inject.Inject
 @HiltViewModel
 class WeatherVM @Inject constructor(
     private val weatherRepository: WeatherRepository
-): ViewModel() {
+): BaseViewModel() {
     val uiState = MutableStateFlow(WeatherState())
 
     fun getWeather() {
         uiState.update {
             it.copy(isLoading = true)
         }
-        viewModelScope.launch {
+        launchSuspend {
             weatherRepository.getWeather(uiState.value.city.trim())
                 .catch { e ->
                     uiState.value = uiState.value.copy(
@@ -36,7 +38,7 @@ class WeatherVM @Inject constructor(
                                 description = result.data.weather.first().description,
                                 isLoading = false,
                                 icon = result.data.weather.first().icon,
-                                imageUrl = "https://openweathermap.org/img/wn/${result.data.weather.first().icon}.png"
+                                imageUrl = "${BuildConfig.IMAGEHOST}${result.data.weather.first().icon}.png"
                             )
                         }
                         is Result.Error -> {
@@ -52,6 +54,14 @@ class WeatherVM @Inject constructor(
         }
 
 
+    }
+
+    override fun handleException(throwable: Throwable) {
+        Log.d("coroutine", throwable.message ?: "Error occurred! Please try again.")
+        uiState.value = uiState.value.copy(
+            error = throwable.message ?: "An error occurred",
+            isLoading = false
+        )
     }
 
     fun updateCity(city: String){

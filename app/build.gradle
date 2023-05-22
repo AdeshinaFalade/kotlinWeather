@@ -38,6 +38,7 @@ android {
             minifyEnabled false
             buildConfigField "String", "HOST", "\"https://api.openweathermap.org/\""
             buildConfigField "String", "APIKEY", CONFIG("APIKEY")
+            buildConfigField "String", "IMAGEHOST", CONFIG("IMAGEHOST")
         }
     }
     compileOptions {

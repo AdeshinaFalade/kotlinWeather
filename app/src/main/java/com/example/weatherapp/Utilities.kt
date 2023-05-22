@@ -1,8 +1,10 @@
 package com.example.weatherapp
 
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import retrofit2.Response
 
 fun <T> apiFlow(
@@ -25,4 +27,4 @@ fun <T> apiFlow(
     } catch (e: Exception) {
         emit(Result.Error(e.message ?: "Unknown error occurred"))
     }
-}
+}.flowOn(Dispatchers.IO)
