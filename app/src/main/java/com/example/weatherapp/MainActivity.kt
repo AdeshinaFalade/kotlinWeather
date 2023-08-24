@@ -1,13 +1,23 @@
 package com.example.weatherapp
 
+import android.content.Context
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -24,12 +34,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -39,14 +46,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -56,12 +66,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import coil.compose.AsyncImage
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.weatherapp.ui.theme.WeatherAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 import java.util.Locale
+import kotlin.math.absoluteValue
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -73,14 +86,15 @@ class MainActivity : ComponentActivity() {
             WeatherAppTheme {
                 // A surface container using the 'background' color from the theme
 
-                    MyApp(weatherVM)
+                MyApp(weatherVM)
 
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
     ExperimentalGlideComposeApi::class
 )
 @Composable
@@ -98,7 +112,7 @@ fun MyApp(
     Box(
         modifier = Modifier
             .fillMaxSize()
-           ){
+    ) {
 //        Image(
 //            painter = painterResource(id = R.drawable.weather),
 //            contentDescription = "",
@@ -106,7 +120,7 @@ fun MyApp(
 //            contentScale = ContentScale.FillBounds
 //        )
         Surface(
-            color = if(isSystemInDarkTheme()) Color(0xFF1C1B1F) else  Color(0xFFFFFDD0),
+            color = if (isSystemInDarkTheme()) Color(0xFF1C1B1F) else Color(0xFFFFFDD0),
             modifier = Modifier.fillMaxSize()
         ) {
             Column(
@@ -200,33 +214,65 @@ fun MyApp(
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(top = 10.dp)
                     )
+                    var selectedPdfUri by remember { mutableStateOf<Uri?>(null) }
+                    PdfPicker { uri ->
+                        selectedPdfUri = uri
+                    }
+
+                    // Display the selected PDF if available
+                    selectedPdfUri?.let { uri ->
+                        var selectedFileName by remember { mutableStateOf("") }
+                        var selectedFileSize by remember { mutableStateOf("") }
+                        Text("Selected PDF: $selectedFileName ($selectedFileSize)")
+                        val context = LocalContext.current
+                        val contentResolver = context.contentResolver
+                        val cursor = contentResolver.query(uri, null, null, null, null)
+
+                        cursor?.use {
+                            if (it.moveToFirst()) {
+                                val displayNameIndex =
+                                    it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                                val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                                selectedFileName = it.getString(displayNameIndex)
+                                val size = it.getLong(sizeIndex)
+                                selectedFileSize = formatFileSize(size)
+                            }
+                        }
+
+                    }
+
+
                 }
             }
         }
     }
     if(uiState.isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-                .clickable(
-                    interactionSource = MutableInteractionSource(),
-                    indication = null,
-                    onClick = {}
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(modifier = Modifier.size(60.dp))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
+            .clickable(
+                interactionSource = MutableInteractionSource(),
+                indication = null,
+                onClick = {}
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        AlternatingSwappingCircles(
+            modifier = Modifier.fillMaxSize()
+        )
     }
-    if(uiState.error != null){
+    }
+
+
+    if (uiState.error != null) {
         ModalBottomSheet(
-            onDismissRequest = {weatherVM.clearError()},
+            onDismissRequest = { weatherVM.clearError() },
             modifier = Modifier
                 .fillMaxHeight(0.5f),
-            containerColor = if(isSystemInDarkTheme()) Color(0xFF1C1B1F) else  Color(0xFFFFFDD0),
+            containerColor = if (isSystemInDarkTheme()) Color(0xFF1C1B1F) else Color(0xFFFFFDD0),
             sheetState = bottomSheetState
-        ){
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -265,7 +311,7 @@ fun MyApp(
                         textAlign = TextAlign.Center
                     ),
                     maxLines = 2,
-                    )
+                )
                 Spacer(modifier = Modifier.size(47.dp))
                 Button(
                     // Note: If you provide logic outside of onDismissRequest to remove the sheet,
@@ -344,4 +390,118 @@ fun MyApp(
 //        }
     }
 }
+
+@Composable
+fun PdfPicker(onPdfSelected: (Uri) -> Unit) {
+    var pdfUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                if (isFileSizeWithinLimit(context, it, 1)) {
+                    onPdfSelected(it)
+                    pdfUri = uri
+                } else {
+                    // Show an error message or handle exceeding file size
+                    Toast.makeText(context, "File size exceeds 1MB", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
+
+
+    Button(
+        onClick = {
+            launcher.launch("application/pdf")
+        }
+    ) {
+        Text("Select PDF")
+    }
+
+}
+
+private fun formatFileSize(size: Long): String {
+    val decimalFormat = DecimalFormat("#.##")
+    val kiloByte = 1024
+    val megaByte = kiloByte * kiloByte
+
+    return when {
+        size < kiloByte -> "${decimalFormat.format(size)} B"
+        size < megaByte -> "${decimalFormat.format(size.toFloat() / kiloByte)} KB"
+        else -> "${decimalFormat.format(size.toFloat() / megaByte)} MB"
+    }
+}
+
+fun isFileSizeWithinLimit(context: Context, uri: Uri, maxSizeInMB: Int): Boolean {
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    cursor?.use {
+        if (it.moveToFirst()) {
+            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+            val size = it.getLong(sizeIndex)
+            val maxSizeInBytes = maxSizeInMB * 1024 * 1024 // Convert MB to bytes
+            return size <= maxSizeInBytes
+        }
+    }
+    return false
+}
+
+
+@Composable
+fun AlternatingSwappingCircles(
+    modifier: Modifier = Modifier,
+    circleSize: Float = 40f,
+    circleSpacing: Float = 2f,
+    colors: List<Color> = listOf(Color.Cyan, Color.Red),
+    animationDuration: Int = 1000
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "")
+    val space = (circleSize / 2) + circleSpacing
+    val firstCircleOffset by infiniteTransition.animateFloat(
+        initialValue = -space,
+        targetValue = space,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = animationDuration),
+            repeatMode = RepeatMode.Reverse
+        ), label = ""
+    )
+    val secondCircleOffset by infiniteTransition.animateFloat(
+        initialValue = space,
+        targetValue = -space,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = animationDuration),
+            repeatMode = RepeatMode.Reverse
+        ), label = ""
+    )
+
+//    val secondCircleRadius = if (secondCircleOffset == 0f) (circleSize * 0.4f) / 2
+//    else ((secondCircleOffset / space) * (circleSize / 2)).absoluteValue
+
+    val progress = (space - secondCircleOffset.absoluteValue) / space
+    val minSize = circleSize * 0.4f / 2
+    val maxSize = circleSize / 2
+    val secondCircleRadius = lerp(maxSize, minSize, progress)
+
+
+    Canvas(modifier = modifier) {
+        val centerY = size.height / 2
+        val centerX = size.width / 2
+
+        drawCircle(
+            color = colors[0],
+            center = Offset(centerX + firstCircleOffset, centerY),
+            radius = circleSize / 2
+        )
+
+        drawCircle(
+            color = colors[1],
+            center = Offset(centerX + secondCircleOffset, centerY),
+            radius = secondCircleRadius
+        )
+    }
+}
+
+
+
+
 
