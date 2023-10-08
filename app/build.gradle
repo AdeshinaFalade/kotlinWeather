@@ -28,7 +28,7 @@ android {
             storeFile file("${rootDir}/weatherapp.keystore")
             storePassword 'Shina123.'
             keyAlias 'weatherkey'
-            keyPassword 'Shina123.'
+            keyPassword keystorePassword
         }
     }
 
