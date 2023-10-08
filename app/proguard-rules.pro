@@ -14,12 +14,15 @@
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 -keep class com.example.weatherapp.WeatherResponse
+-keep class com.example.weatherapp.BuildConfig
+-keep class com.example.weatherapp.NetworkModule
+-keep public class com.example.weatherapp.WeatherApplication
 -keepparameternames
 -renamesourcefileattribute SourceFile
 -keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
@@ -56,3 +59,18 @@
     java.lang.Object writeReplace();
     java.lang.Object readResolve();
 }
+
+-dontwarn retrofit.**
+-keep class retrofit.** { *; }
+-keepattributes Signature
+-keepattributes Exceptions
+
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-dontwarn okhttp3.**
+-dontnote okhttp3.**
+
+
+-keep class com.google.gson.stream.** { *; }

@@ -1,9 +1,11 @@
 package com.example.weatherapp
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -54,8 +57,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -64,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
@@ -75,6 +81,8 @@ import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.util.Locale
 import kotlin.math.absoluteValue
+
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -108,6 +116,23 @@ fun MyApp(
     val uiState = weatherVM.uiState.collectAsState().value
     val scope = rememberCoroutineScope()
     val imageUrl = remember { mutableStateOf(uiState.imageUrl) }
+//
+//    val resultLauncher =
+//        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+//                result ->
+//            val data: Intent? = result.data
+//            if (result.resultCode == ContactlessReaderResult.RESULT_OK) {
+//                data?.let { i ->
+//                    Log.e("tag", "value: ${i.getStringExtra("data")}")
+//                }
+//            }
+//            if (result.resultCode == ContactlessReaderResult.RESULT_ERROR) {
+//                data?.let { i ->
+//                    Log.e("tag", "value: ${i.getStringExtra("message")}")
+//                }
+//            }
+//        }
+
     imageUrl.value = uiState.imageUrl
     Box(
         modifier = Modifier
@@ -135,6 +160,7 @@ fun MyApp(
                         .weight(1f)
                         .padding(horizontal = 50.dp)
                 ) {
+
                     OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth(),
@@ -159,6 +185,13 @@ fun MyApp(
                         onClick = {
                             keyboard?.hide()
                             weatherVM.getWeather()
+
+//                            ContactlessSdk.readContactlessCard(this,
+//                                resultLauncher,
+//                                "86CBCDE3B0A22354853E04521686863D", //pinKey
+//                                100.0, //amount
+//                                0.0 //cashbackAmount(optional)
+//                            )
                         },
                         modifier = Modifier
                             .width(200.dp)
@@ -500,6 +533,7 @@ fun AlternatingSwappingCircles(
         )
     }
 }
+
 
 
 

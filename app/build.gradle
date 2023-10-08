@@ -22,21 +22,40 @@ android {
         }
     }
 
+    signingConfigs {
+
+        release {
+            storeFile file("${rootDir}/weatherapp.keystore")
+            storePassword 'Shina123.'
+            keyAlias 'weatherkey'
+            keyPassword 'Shina123.'
+        }
+    }
+
     buildTypes {
         Properties properties = new Properties()
         properties.load(project.rootProject.file('local.properties').newDataInputStream())
         def CONFIG = { k -> "\"${properties .get(k)}\"" }
 
         release {
-            minifyEnabled false
+            minifyEnabled true
             buildConfigField "String", "HOST", "\"https://api.openweathermap.org/\""
             buildConfigField "String", "APIKEY", CONFIG("APIKEY")
+            buildConfigField "String", "IMAGEHOST", CONFIG("IMAGEHOST")
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
 
         debug {
             minifyEnabled false
-            buildConfigField "String", "HOST", "\"https://api.openweathermap.org/\""
+            buildConfigField "String", "HOST", CONFIG("HOST")
+            buildConfigField "String", "APIKEY", CONFIG("APIKEY")
+            buildConfigField "String", "IMAGEHOST", CONFIG("IMAGEHOST")
+        }
+
+        dev {
+            minifyEnabled false
+            buildConfigField "String", "HOST", CONFIG("HOST")
             buildConfigField "String", "APIKEY", CONFIG("APIKEY")
             buildConfigField "String", "IMAGEHOST", CONFIG("IMAGEHOST")
         }
@@ -94,7 +113,8 @@ dependencies {
     kapt "com.google.dagger:hilt-compiler:2.44"
 
     implementation 'com.github.bumptech.glide:compose:1.0.0-alpha.1'
-
+    // netpos
+//    implementation 'org.bitbucket.netplustechteam:contactless_sdk:1.0.8'
 
 }
 
