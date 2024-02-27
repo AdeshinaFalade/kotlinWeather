@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -45,6 +47,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -71,6 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -167,26 +172,44 @@ fun MyApp(
                         .weight(1f)
                         .padding(horizontal = 50.dp)
                 ) {
-
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        value = uiState.city,
-                        onValueChange = { weatherVM.updateCity(it) },
-                        keyboardActions = KeyboardActions {
-                            keyboard?.hide()
-                            if (uiState.city.isNotEmpty())
-                                weatherVM.getWeather()
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
-                        label = {
-                            Text(
-                                text = "City Name",
-                                color = MaterialTheme.colorScheme.onBackground
+                    Box(modifier = Modifier
+                        .background(
+                            color = Color(0xFFF5F5F5),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(width = 1.dp, shape = RoundedCornerShape(12.dp) , color = Color(0xFFE0E0E0))
+                        .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        TextField(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            value = uiState.city,
+                            onValueChange = { weatherVM.updateCity(it) },
+                            keyboardActions = KeyboardActions {
+                                keyboard?.hide()
+                                if (uiState.city.isNotEmpty())
+                                    weatherVM.getWeather()
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                            label = {
+                                Text(
+                                    text = "City Name",
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
                             )
-                        },
-                    )
+
+                        )
+                    }
                     Button(
                         enabled = uiState.city.isNotEmpty(),
                         onClick = {
@@ -594,6 +617,46 @@ class Polygon(val sides: Int, val rotation: Float = 0f) : Shape {
                 close()
             })
     }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewTextField(){
+    Box(modifier = Modifier
+        .padding(horizontal = 10.dp, vertical = 10.dp)
+        .background(
+            color = Color(0xFFF5F5F5)
+        )
+        .border(width = 1.dp, shape = RoundedCornerShape(12.dp) , color = Color(0xFFE0E0E0))
+        .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ){
+        TextField(
+            modifier = Modifier
+                .fillMaxWidth(),
+            value = "Lagos",
+            onValueChange = { },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+            label = {
+                Text(
+                    text = "City Name",
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+            )
+
+        )
+    }
+
 }
 
 
