@@ -1,11 +1,11 @@
 package com.example.weatherapp
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -57,10 +56,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -69,10 +71,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import androidx.core.graphics.PathParser
 import coil.compose.AsyncImage
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.weatherapp.ui.theme.WeatherAppTheme
@@ -80,8 +84,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.util.Locale
+import java.util.regex.Pattern
 import kotlin.math.absoluteValue
-
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.tan
 
 
 @AndroidEntryPoint
@@ -202,6 +209,34 @@ fun MyApp(
                         )
                     }
 
+                    val context = LocalContext.current
+
+                    Button(
+                        enabled = true,
+                        onClick = {
+                            keyboard?.hide()
+                            val teamsIntent = Intent(Intent.ACTION_SEND)
+                            teamsIntent.setType("text/plain")
+                            teamsIntent.setPackage("com.microsoft.teams")
+                            teamsIntent.putExtra(
+                                Intent.EXTRA_TEXT,
+                                "The text you wanted to share"
+                            )
+                            try {
+                                context.startActivity(teamsIntent)
+                            } catch (ex: ActivityNotFoundException) {
+                                Toast.makeText(context,"Teams have not been installed.",Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier
+                            .width(200.dp)
+                            .padding(top = 30.dp)
+                    ) {
+                        Text(
+                            text = "Share"
+                        )
+                    }
+
                 }
                 Column(
                     horizontalAlignment = Alignment.Start,
@@ -279,32 +314,40 @@ fun MyApp(
             }
         }
     }
-    if(uiState.isLoading) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
-            .clickable(
-                interactionSource = MutableInteractionSource(),
-                indication = null,
-                onClick = {}
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        AlternatingSwappingCircles(
-            modifier = Modifier.fillMaxSize()
-        )
-    }
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .clickable(
+                    interactionSource = MutableInteractionSource(),
+                    indication = null,
+                    onClick = {}
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AlternatingSwappingCircles(
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 
 
     if (uiState.error != null) {
         ModalBottomSheet(
             onDismissRequest = { weatherVM.clearError() },
+            shape = AlatXplorerModal,
             modifier = Modifier
                 .fillMaxHeight(0.5f),
-            containerColor = if (isSystemInDarkTheme()) Color(0xFF1C1B1F) else Color(0xFFFFFDD0),
-            sheetState = bottomSheetState
+            containerColor = Color.White /*if (isSystemInDarkTheme()) Color(0xFF1C1B1F) else Color(0xFFFFFDD0)*/,
+            sheetState = bottomSheetState,
+            dragHandle = {
+                Image(
+                    painter = painterResource(id = R.drawable.drag_handle),
+                    contentDescription = null,
+                    modifier = Modifier.padding(top = 9.43.dp)
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
@@ -335,7 +378,7 @@ fun MyApp(
                 )
                 Spacer(Modifier.height(17.dp))
                 Text(
-                    text = uiState.error,
+                    text = uiState.error ?: "Error",
                     style = TextStyle(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.W400,
@@ -347,8 +390,6 @@ fun MyApp(
                 )
                 Spacer(modifier = Modifier.size(47.dp))
                 Button(
-                    // Note: If you provide logic outside of onDismissRequest to remove the sheet,
-                    // you must additionally handle intended state cleanup, if any.
                     onClick = {
                         scope.launch { bottomSheetState.hide() }.invokeOnCompletion {
                             if (!bottomSheetState.isVisible) {
@@ -362,65 +403,6 @@ fun MyApp(
             }
 
         }
-//        AlertDialog(
-//            onDismissRequest = { }
-//        ) {
-//            Column(
-//                modifier = Modifier
-//                    .wrapContentSize()
-//                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-//                    .padding(25.dp),
-//                horizontalAlignment = Alignment.CenterHorizontally,
-//                verticalArrangement = Arrangement.Center
-//            ) {
-//            Image(
-//                painter = painterResource(
-//                    id = R.drawable.ic_error_icon
-//                ),
-//                contentDescription = "status_icon",
-//                modifier = Modifier.size(86.dp)
-//            )
-//            Spacer(Modifier.height(9.dp))
-//            Text(
-//                text = "Failed",
-//                style = TextStyle(
-//                    fontSize = 20.sp,
-//                    fontWeight = FontWeight.W600,
-//                    color = Color.Black,
-//                    lineHeight = 27.sp,
-//                    textAlign = TextAlign.Center
-//                ),
-//                maxLines = 2,
-//                overflow = TextOverflow.Ellipsis
-//            )
-//            Spacer(Modifier.height(17.dp))
-//            Text(
-//                text = uiState.error,
-//                style = TextStyle(
-//                    fontSize = 14.sp,
-//                    fontWeight = FontWeight.W400,
-//                    color = Color.Black,
-//                    lineHeight = 23.8.sp,
-//                    textAlign = TextAlign.Center
-//                ),
-//                maxLines = 2,
-//            )
-//            Spacer(modifier = Modifier.size(47.dp))
-//            Button(
-//                // Note: If you provide logic outside of onDismissRequest to remove the sheet,
-//                // you must additionally handle intended state cleanup, if any.
-//                onClick = {
-//                    scope.launch { bottomSheetState.hide() }.invokeOnCompletion {
-//                        if (!bottomSheetState.isVisible) {
-//                            weatherVM.clearError()
-//                        }
-//                    }
-//                }
-//            ) {
-//                Text("Okay")
-//            }
-//        }
-//        }
     }
 }
 
@@ -479,7 +461,6 @@ fun isFileSizeWithinLimit(context: Context, uri: Uri, maxSizeInMB: Int): Boolean
     return false
 }
 
-
 @Composable
 fun AlternatingSwappingCircles(
     modifier: Modifier = Modifier,
@@ -534,8 +515,86 @@ fun AlternatingSwappingCircles(
     }
 }
 
+object AlatXplorerModal : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val pathData =
+            """M0 47.4041C0 25.3127 17.9086 7.40404 40 7.40404H127.816C133.263 7.40404 138.701 6.959 144.075 6.07337L170.897 1.65351C181.562 -0.103868 192.441 -0.120661 203.111 1.60379L231.074 6.12309C236.35 6.97568 241.685 7.40404 247.029 7.40404H335C357.091 7.40404 375 25.3127 375 47.404V415H0V47.4041Z"""
+        val scaleX = size.width / 375F
+        val scaleY = size.height / 415F
+        return Outline.Generic(
+            PathParser.createPathFromPathData(resize(pathData, scaleX, scaleY)).asComposePath()
+        )
+    }
 
+    private fun resize(pathData: String, scaleX: Float, scaleY: Float): String {
+        val matcher = Pattern.compile("[0-9]+[.]?([0-9]+)?")
+            .matcher(pathData) // match the numbers in the path
+        val stringBuffer = StringBuffer()
+        var count = 0
+        while (matcher.find()) {
+            val number = matcher.group().toFloat()
+            matcher.appendReplacement(
+                stringBuffer,
+                (if (count % 2 == 0) number * scaleX else number * scaleY).toString()
+            ) // replace numbers with scaled numbers
+            ++count
+        }
+        return stringBuffer.toString() // return the scaled path
+    }
+}
 
+class Parallelogram(private val angle: Float) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        return Outline.Generic(
+
+            Path().apply {
+                val radian = (90 - angle) * Math.PI / 180
+                val xOnOpposite = (size.height * tan(radian)).toFloat()
+                moveTo(0f, size.height)
+                lineTo(x = xOnOpposite, y = 0f)
+                lineTo(x = size.width, y = 0f)
+                lineTo(x = size.width - xOnOpposite, y = size.height)
+                lineTo(x = xOnOpposite, y = size.height)
+            }
+        )
+    }
+}
+
+class Polygon(val sides: Int, val rotation: Float = 0f) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        return Outline.Generic(
+            Path().apply {
+                val radius = if (size.width > size.height) size.width / 2f else size.height / 2f
+                val angle = 2.0 * Math.PI / sides
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val r = rotation * (Math.PI / 180)
+                moveTo(
+                    cx + (radius * cos(0.0 + r).toFloat()),
+                    cy + (radius * sin(0.0 + r).toFloat())
+                )
+                for (i in 1 until sides) {
+                    lineTo(
+                        cx + (radius * cos(angle * i + r).toFloat()),
+                        cy + (radius * sin(angle * i + r).toFloat())
+                    )
+                }
+                close()
+            })
+    }
+}
 
 
 
